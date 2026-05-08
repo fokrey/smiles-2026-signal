@@ -7,9 +7,9 @@ from scipy.io import loadmat
 from task_and_baseline import baseline, build_task_helpers
 
 # Download the dataset
-url = "https://drive.google.com/file/d/1BBHVSI4KB-B8OX46eN1Nm4ARCeq6Rui4/view?usp=sharing"
-downloaded_file = "challenge.mat"
-gdown.download(url, downloaded_file, quiet=False, fuzzy=True)
+# url = "https://drive.google.com/file/d/1BBHVSI4KB-B8OX46eN1Nm4ARCeq6Rui4/view?usp=sharing"
+# downloaded_file = "challenge.mat"
+# gdown.download(url, downloaded_file, quiet=False)
 
 data = loadmat("challenge.mat", simplify_cells=True)
 tx = data["tx"].astype(np.complex128)
@@ -22,8 +22,20 @@ helpers = build_task_helpers(tx_n, Fs, N)
 
 
 def your_canceller(tx_n, rx):
-    """Release placeholder: applicants should replace this with their own method."""
-    return baseline(tx_n, rx, helpers["fit_tx_prediction"])
+    rx_base = baseline(tx_n, rx, helpers["fit_tx_prediction"])
+
+    X = rx_base
+    Xc = X - X.mean(axis=0, keepdims=True)
+
+    C = Xc.conj().T @ Xc / Xc.shape[0] #covariance across RX channels
+
+    vals, vecs = np.linalg.eigh(C)
+    v = vecs[:, -1:]
+
+    coherent = (Xc @ v) @ v.conj().T
+    rx_hat = rx_base - coherent
+
+    return rx_hat
 
 
 print("\n=== Baseline ===")
